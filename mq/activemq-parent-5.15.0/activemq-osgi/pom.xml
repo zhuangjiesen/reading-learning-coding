@@ -1,0 +1,570 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.apache.activemq</groupId>
+    <artifactId>activemq-parent</artifactId>
+    <version>5.15.0</version>
+  </parent>
+
+  <artifactId>activemq-osgi</artifactId>
+  <packaging>bundle</packaging>
+  <name>ActiveMQ :: OSGi bundle</name>
+  <description>Puts together an ActiveMQ OSGi bundle</description>
+
+  <properties>
+    <activemq.osgi.import.pkg>
+      !org.apache.commons.daemon,
+      !org.apache.maven*,
+      !com.google.thirdparty.publicsuffix,
+      sun.misc*;resolution:=optional,
+      sun.nio*;resolution:=optional,
+      javax.jmdns*;resolution:=optional,
+      javax.resource*;resolution:=optional,
+      javax.servlet*;resolution:=optional,
+      com.thoughtworks.xstream*;resolution:=optional,
+      org.apache.activeio*;resolution:=optional,
+      org.apache.activemq.camel*;resolution:=optional,
+      org.apache.camel*;version:="${camel-version-range}";resolution:=optional,
+      org.apache.derby.jdbc*;resolution:=optional,
+      org.apache.geronimo.transaction.manager*;resolution:=optional,
+      org.apache.hadoop*;resolution:=optional,
+      org.apache.http*;resolution:=optional,
+      org.apache.xpath*;resolution:=optional,
+      org.bouncycastle*;resolution:=optional,
+      com.fasterxml.jackson*;resolution:=optional,
+      org.codehaus.jettison*;resolution:=optional,
+      org.jasypt*;resolution:=optional,
+      org.eclipse.jetty*;resolution:=optional;version="[9.0,10)",
+      org.apache.zookeeper*;resolution:=optional,
+      org.fusesource.leveldbjni*;resolution:=optional,
+      org.fusesource.hawtjni*;resolution:=optional,
+      org.springframework.jms*;version="[4,5)";resolution:=optional,
+      org.springframework.transaction*;version="[4,5)";resolution:=optional,
+      org.springframework*;version="[4,5)";resolution:=optional,
+      org.xmlpull*;resolution:=optional,
+      scala*;resolution:=optional,
+      javax.annotation*,
+      !com.thoughtworks.qdox*,
+      org.apache.commons.logging;version="[1.2,2)";resolution:=optional,
+      javax.jms*;version="[1.1,3)",
+      javax.management*,
+      javax.transaction*,
+      javax.naming*;resolution:=optional,
+      org.apache.commons.pool*;resolution:=optional,
+      org.apache.commons.net*;resolution:=optional,
+      com.sun*;resolution:=optional,
+      org.jvnet.jaxb2_commons*;resolution:=optional,
+      org.xerial.snappy*;resolution:=optional,
+      groovy.lang*;resolution:=optional,
+      org.codehaus.groovy*;resolution:=optional,
+      org.apache.tools.ant*;resolution:=optional,
+      org.apache.log4j*;resolution:=optional,
+      org.json*;resolution:=optional,
+        *
+    </activemq.osgi.import.pkg>
+    <activemq.osgi.export>
+      org.apache.activemq*;version=${project.version};-noimport:=true;-split-package:=merge-first,
+      org.apache.activemq.web*;version=${project.version};-noimport:=true;-split-package:=merge-first,
+    </activemq.osgi.export>
+    <activemq.osgi.private.pkg>
+         org.apache.xbean*,
+         org.fusesource.hawtdispatch*,
+         org.fusesource.mqtt*,
+         org.fusesource.hawtbuf*,
+         org.apache.qpid*,
+         com.google.common*,
+         org.linkedin*,
+         org.iq80*
+    </activemq.osgi.private.pkg>
+    <activemq.osgi.dynamic.import>*</activemq.osgi.dynamic.import>
+    <surefire.argLine>-Xmx512M</surefire.argLine>
+  </properties>
+
+  <dependencies>
+    <!-- The core broker dependency -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-broker</artifactId>
+    </dependency>
+
+    <!-- Additional message store impls -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-kahadb-store</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-jdbc-store</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-leveldb-store</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+
+    <!-- Additional protocol impls -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-stomp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-amqp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-mqtt</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-http</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-partition</artifactId>
+    </dependency>
+
+    <!-- Additional Dependencies. -->
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-jaas</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-console</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-ra</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-web</artifactId>
+      <exclusions>
+      <exclusion>
+          <artifactId>activemq-all</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-spring</artifactId>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.camel</groupId>
+      <artifactId>camel-blueprint</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>activemq-runtime-config</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.core</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.osgi</groupId>
+      <artifactId>org.osgi.compendium</artifactId>
+      <version>${org.osgi.core-version}</version>
+       <scope>provided</scope>
+    </dependency>
+
+  </dependencies>
+
+  <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>target/extra-resources</directory>
+      </resource>
+    </resources>
+    <plugins>
+      <!-- get camel core spring schema info -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.apache.camel</groupId>
+                  <artifactId>camel-spring</artifactId>
+                  <version>${camel-version}</version>
+                  <type>jar</type>
+                  <overWrite>false</overWrite>
+                  <outputDirectory>${basedir}/target/extra-resources/</outputDirectory>
+                  <includes>camel-spring.xsd</includes>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.camel</groupId>
+                  <artifactId>camel-blueprint</artifactId>
+                  <version>${camel-version}</version>
+                  <type>jar</type>
+                  <overWrite>false</overWrite>
+                  <outputDirectory>${basedir}/target/extra-resources/</outputDirectory>
+                  <includes>camel-blueprint.xsd</includes>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- Copy all necessary resources from other modules, like spring schema mapping, xbean resources, etc. -->
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-xbean</id>
+            <phase>validate</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${basedir}/target/extra-resources/</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/../activemq-spring/target/classes/</directory>
+                  <includes>
+                    <include>activemq.xsd*</include>
+                  </includes>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <configuration>
+          <instructions>
+            <Bundle-Activator>org.apache.activemq.util.osgi.Activator</Bundle-Activator>
+            <Embed-Dependency>
+              *;groupId=org.apache.activemq;inline=META-INF/services/*,
+              *;groupId=org.apache.qpid;inline=META-INF/services/*,
+              *;groupId=org.apache.xbean;inline=true
+              <!--
+              groupId=org.fusesource.leveldbjni;inline=META-INF/native/*,
+              groupId=org.xerial.snappy;inline=org/xerial/snappy/*
+              -->
+            </Embed-Dependency>
+            <Embed-Transitive>true</Embed-Transitive>
+            <!--
+            <Bundle-NativeCode>
+              META-INF/native/windows32/leveldbjni.dll;osname=Win32;processor=x86,
+              META-INF/native/windows64/leveldbjni.dll;osname=Win32;processor=x86-64,
+              META-INF/native/osx/libleveldbjni.jnilib;osname=macosx,
+              META-INF/native/linux32/libleveldbjni.so;osname=Linux;processor=x86,
+              META-INF/native/linux64/libleveldbjni.so;osname=Linux;processor=x86-64,
+              org/xerial/snappy/native/Windows/amd64/snappyjava.dll;osname=win32;processor=x86-64,
+              org/xerial/snappy/native/Windows/x86/snappyjava.dll;osname=win32;processor=x86,
+              org/xerial/snappy/native/Mac/x86_64/libsnappyjava.jnilib;osname=macosx;processor=x86-64,
+              org/xerial/snappy/native/Linux/amd64/libsnappyjava.so;osname=linux;processor=x86-64,
+              org/xerial/snappy/native/Linux/i386/libsnappyjava.so;osname=linux;processor=x86,
+              org/xerial/snappy/native/Linux/arm/libsnappyjava.so;osname=linux;processor=arm,
+              *
+            </Bundle-NativeCode>
+            -->
+         </instructions>
+        </configuration>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+    	<plugins>
+    		<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+    		<plugin>
+    			<groupId>org.eclipse.m2e</groupId>
+    			<artifactId>lifecycle-mapping</artifactId>
+    			<version>1.0.0</version>
+    			<configuration>
+    				<lifecycleMappingMetadata>
+    					<pluginExecutions>
+    						<pluginExecution>
+    							<pluginExecutionFilter>
+    								<groupId>
+    									org.apache.maven.plugins
+    								</groupId>
+    								<artifactId>
+    									maven-dependency-plugin
+    								</artifactId>
+    								<versionRange>[2.8,)</versionRange>
+    								<goals>
+    									<goal>unpack</goal>
+    								</goals>
+    							</pluginExecutionFilter>
+    							<action>
+    								<ignore />
+    							</action>
+    						</pluginExecution>
+    					</pluginExecutions>
+    				</lifecycleMappingMetadata>
+    			</configuration>
+    		</plugin>
+    	</plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <profile>
+      <id>deploy</id>
+      <build>
+        <defaultGoal>deploy</defaultGoal>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>${maven-source-plugin-version}</version>
+            <configuration>
+              <attach>false</attach>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>apache-release</id>
+
+      <dependencies>
+
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-client</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-openwire-legacy</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-jaas</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-broker</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-console</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-spring</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-amqp</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-http</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-mqtt</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-stomp</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-kahadb-store</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-jdbc-store</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>activemq-leveldb-store</artifactId>
+          <version>${project.version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.activemq.protobuf</groupId>
+          <artifactId>activemq-protobuf</artifactId>
+          <version>${activemq-protobuf-version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.fusesource.hawtbuf</groupId>
+          <artifactId>hawtbuf</artifactId>
+          <version>${hawtbuf-version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.jasypt</groupId>
+          <artifactId>jasypt</artifactId>
+          <version>${jasypt-version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-jms_1.1_spec</artifactId>
+          <version>1.1.1</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <!-- <dependency>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-jta_1.0.1B_spec</artifactId>
+          <version>1.0.1</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency> -->
+        <dependency>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-j2ee-management_1.1_spec</artifactId>
+          <version>1.0.1</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.geronimo.specs</groupId>
+          <artifactId>geronimo-annotation_1.0_spec</artifactId>
+          <version>1.1.1</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-api</artifactId>
+          <version>${slf4j-version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-log4j12</artifactId>
+          <version>${slf4j-version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+        <dependency>
+          <groupId>log4j</groupId>
+          <artifactId>log4j</artifactId>
+          <version>${log4j-version}</version>
+          <classifier>sources</classifier>
+          <optional>true</optional>
+        </dependency>
+      </dependencies>
+
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-source-plugin</artifactId>
+            <configuration>
+              <skipSource>true</skipSource>
+            </configuration>
+          </plugin>
+          <plugin>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>uber-sources-jar</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <descriptors>
+                    <descriptor>${basedir}/src/main/descriptors/uber-sources.xml</descriptor>
+                  </descriptors>
+                  <appendAssemblyId>true</appendAssemblyId>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+  </profiles>
+
+</project>

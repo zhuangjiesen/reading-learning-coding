@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+-->
+
+<features name="activemq-${project.version}">
+
+    <repository>mvn:org.apache.activemq/activemq-karaf/${project.version}/xml/features-core</repository>
+
+    <!-- Starts the broker with default configuration -->
+    <feature name="activemq-broker-noweb" description="Full ActiveMQ broker with default configuration" version="${project.version}" resolver="(obr)" start-level="50">
+        <feature version="${project.version}">activemq</feature>
+        <configfile finalname="/etc/activemq.xml">mvn:org.apache.activemq/activemq-karaf/${project.version}/xml/activemq</configfile>
+        <configfile finalname="/etc/org.apache.activemq.server-default.cfg">mvn:org.apache.activemq/activemq-karaf/${project.version}/cfg/activemq</configfile>
+    </feature>
+
+    <!-- Starts the broker with default configuration and web console -->
+    <feature name="activemq-broker" description="Full ActiveMQ broker with default configuration and web console" version="${project.version}" resolver="(obr)" start-level="50">
+        <feature version="${project.version}">activemq</feature>
+        <configfile finalname="/etc/activemq.xml">mvn:org.apache.activemq/activemq-karaf/${project.version}/xml/activemq</configfile>
+        <configfile finalname="/etc/org.apache.activemq.server-default.cfg">mvn:org.apache.activemq/activemq-karaf/${project.version}/cfg/activemq</configfile>
+        <feature version="${project.version}">activemq-web-console</feature>
+    </feature>
+
+    <feature name="activemq-camel" version="${project.version}" resolver="(obr)" start-level="50">
+        <feature version="${project.version}">activemq-client</feature>
+        <bundle>mvn:org.apache.activemq/activemq-camel/${project.version}</bundle>
+        <feature version="${camel-version-range}">camel-jms</feature>
+        <feature version="${camel-version-range}">camel</feature>
+        <feature version="${camel-version-range}">camel-spring</feature>
+        <feature version="${camel-version-range}">camel-blueprint</feature>
+    </feature>
+
+    <feature name="activemq-web-console" version="${project.version}" resolver="(obr)" start-level="50">
+      <feature start-level="10">war</feature>
+      <feature start-level="10">eventadmin</feature>
+      <configfile finalname="/etc/org.apache.activemq.webconsole.cfg">mvn:org.apache.activemq/activemq-karaf/${project.version}/cfg/activemq-webconsole</configfile>
+      <bundle>mvn:org.apache.activemq/activemq-web-console/${project.version}/war</bundle>
+    </feature>
+
+    <feature name="activemq-blueprint" version="${project.version}" resolver="(obr)" start-level="50">
+      <feature version="${project.version}">activemq</feature>
+      <bundle dependency="true">mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.scripting-api-1.0/${servicemix.specs.version}</bundle>
+      <bundle dependency="true">mvn:org.apache.commons/commons-jexl/2.0.1</bundle>
+      <bundle dependency="true">mvn:org.apache.xbean/xbean-blueprint/${xbean-version}</bundle>
+      <bundle>mvn:org.apache.activemq/activemq-blueprint/${project.version}</bundle>
+    </feature>
+
+    <feature name="activemq-amqp-client" version="${pom.version}" description="ActiveMQ AMQP protocol client libraries">
+      <bundle>mvn:io.netty/netty-common/${qpid-jms-netty-version}</bundle>
+      <bundle>mvn:io.netty/netty-transport/${qpid-jms-netty-version}</bundle>
+      <bundle>mvn:io.netty/netty-transport-native-epoll/${qpid-jms-netty-version}</bundle>
+      <bundle>mvn:io.netty/netty-buffer/${qpid-jms-netty-version}</bundle>
+      <bundle>mvn:io.netty/netty-codec/${qpid-jms-netty-version}</bundle>
+      <bundle>mvn:io.netty/netty-codec-http/${qpid-jms-netty-version}</bundle>
+      <bundle>mvn:io.netty/netty-handler/${netty-all-version}</bundle>
+      <bundle>mvn:io.netty/netty-resolver/${netty-all-version}</bundle>
+      <bundle>mvn:org.apache.qpid/proton-j/${qpid-jms-proton-version}</bundle>
+      <bundle>mvn:org.apache.qpid/qpid-jms-client/${qpid-jms-version}</bundle>
+    </feature>
+
+</features>

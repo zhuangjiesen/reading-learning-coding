@@ -1,0 +1,643 @@
+基于 Thrift 的 TThreadedSelectorServer 源码分析；
+
+
+实战贴：
+demo贴:
+
+最近一直在研究RPC框架，从dubbo框架的实现，到thrift实现以及源码原理的探究，最后研究到基于java nio的框架netty
+
+TThreadedSelectorServer 基于Java nio 与 多线程（池） 设计的rpc服务模型
+
+基于Reactor多线程模型(自行百度)
+
+调用流程图：
+
+
+
+服务启动代码
+```
+
+ TProcessor tprocessor = new HelloWorld.Processor<HelloWorld.Iface>(new HelloWorldImpl());  
+        // 传输通道 - 非阻塞方式    
+        TNonblockingServerSocket serverTransport = new TNonblockingServerSocket(SERVER_PORT);  
+          
+        //多线程半同步半异步  
+        TThreadedSelectorServer.Args tArgs = new TThreadedSelectorServer.Args(serverTransport);  
+        tArgs.processor(tprocessor);  
+        tArgs.transportFactory(new TFramedTransport.Factory());  
+        //二进制协议  
+        tArgs.protocolFactory(new TBinaryProtocol.Factory());  
+        // 多线程半同步半异步的服务模型  
+        TServer server = new TThreadedSelectorServer(tArgs);  
+        System.out.println("HelloTThreadedSelectorServer start....");  
+        server.serve(); // 启动服务  
+
+```
+
+
+程序通过  TServer serve()方法启动监听服务
+
+
+入口 AbstractNonblockingServer 的 serve() 方法：
+```
+
+
+/**
+   * Begin accepting connections and processing invocations.
+   */
+  public void serve() {
+    // start any IO threads
+    if (!startThreads()) {
+    	/*
+		重点是startThreads()方法开启了acceptThread 与 selectorThread 线程列表
+    	*/
+      return;
+    }
+
+    // start listening, or exit
+    if (!startListening()) {
+      return;
+    }
+
+    setServing(true);
+
+    // this will block while we serve
+    waitForShutdown();
+
+    setServing(false);
+
+    // do a little cleanup
+    stopListening();
+  }
+
+
+```
+
+ startThreads() 方法在 子类 TThreadedSelectorServer.java 中 （模板方法模式）
+
+ ```
+
+ /**
+   * Start the accept and selector threads running to deal with clients.
+   * 
+   * @return true if everything went ok, false if we couldn't start for some
+   *         reason.
+   */
+  @Override
+  protected boolean startThreads() {
+    try {
+
+    	/*
+
+    	根据配置的 selectorThreads 大小 启动线程数组 selectorThreads (Set类型) 并初始化 read / write 请求的队列大小
+
+    	即 selectorThread 线程主要是用来处理 read / write 的select事件
+
+    	AcceptThread 通过接收到的 accept 事件，将socketChannel 封装成 
+    	TNonblockingTransport 对象 ，传给 selectorThread 线程的 acceptedQueue 队列，并触发 selectorThread 进行读写操作
+    	*/
+      for (int i = 0; i < args.selectorThreads; ++i) {
+        selectorThreads.add(new SelectorThread(args.acceptQueueSizePerThread));
+      }
+      acceptThread = new AcceptThread((TNonblockingServerTransport) serverTransport_,
+        createSelectorThreadLoadBalancer(selectorThreads));
+      for (SelectorThread thread : selectorThreads) {
+        thread.start();
+      }
+
+      //开启监听端口并注册将 accept 事件注册到 channel 中
+      acceptThread.start();
+      return true;
+    } catch (IOException e) {
+      LOGGER.error("Failed to start threads!", e);
+      return false;
+    }
+  }
+
+
+ ```
+
+
+
+AcceptThread 也是 TThreadedSelectorServer.java 的内部类
+
+监听 SelectionKey.OP_ACCEPT 请求并将 SocketChannel 封装成 TNonblockingTransport 对象 并且将TNonblockingTransport 对象传给selectorThread 
+
+
+```
+ /**
+   * The thread that selects on the server transport (listen socket) and accepts
+   * new connections to hand off to the IO selector threads
+   */
+  protected class AcceptThread extends Thread {
+
+    // The listen socket to accept on
+    private final TNonblockingServerTransport serverTransport;
+    private final Selector acceptSelector;
+
+    private final SelectorThreadLoadBalancer threadChooser;
+
+    /**
+     * Set up the AcceptThead
+     * 
+     * @throws IOException
+     */
+    public AcceptThread(TNonblockingServerTransport serverTransport,
+        SelectorThreadLoadBalancer threadChooser) throws IOException {
+      this.serverTransport = serverTransport;
+      this.threadChooser = threadChooser;
+      this.acceptSelector = SelectorProvider.provider().openSelector();
+      this.serverTransport.registerSelector(acceptSelector);
+    }
+
+    /**
+     * The work loop. Selects on the server transport and accepts. If there was
+     * a server transport that had blocking accepts, and returned on blocking
+     * client transports, that should be used instead
+     */
+    public void run() {
+      try {
+        if (eventHandler_ != null) {
+          eventHandler_.preServe();
+        }
+
+        while (!stopped_) {
+          select();
+        }
+      } catch (Throwable t) {
+        LOGGER.error("run() on AcceptThread exiting due to uncaught error", t);
+      } finally {
+        try {
+          acceptSelector.close();
+        } catch (IOException e) {
+          LOGGER.error("Got an IOException while closing accept selector!", e);
+        }
+        // This will wake up the selector threads
+        TThreadedSelectorServer.this.stop();
+      }
+    }
+
+    /**
+     * If the selector is blocked, wake it up.
+     */
+    public void wakeupSelector() {
+      acceptSelector.wakeup();
+    }
+
+    /**
+     * Select and process IO events appropriately: If there are connections to
+     * be accepted, accept them.
+     */
+    private void select() {
+      try {
+        // wait for connect events.
+        acceptSelector.select();
+
+        // process the io events we received
+        Iterator<SelectionKey> selectedKeys = acceptSelector.selectedKeys().iterator();
+        while (!stopped_ && selectedKeys.hasNext()) {
+          SelectionKey key = selectedKeys.next();
+          selectedKeys.remove();
+
+          // skip if not valid
+          if (!key.isValid()) {
+            continue;
+          }
+
+          if (key.isAcceptable()) {
+            handleAccept();
+          } else {
+            LOGGER.warn("Unexpected state in select! " + key.interestOps());
+          }
+        }
+      } catch (IOException e) {
+        LOGGER.warn("Got an IOException while selecting!", e);
+      }
+    }
+
+    /**
+     * Accept a new connection.
+     */
+    private void handleAccept() {
+    	/*
+		底层是 
+		在 TNonblockingServerSocket.java 类中的 acceptImpl() ；
+		SocketChannel socketChannel = serverSocketChannel.accept();
+    	*/ 
+      final TNonblockingTransport client = doAccept();
+      if (client != null) {
+        // Pass this connection to a selector thread
+        final SelectorThread targetThread = threadChooser.nextThread();
+
+
+        /*
+        	判断是否使用线程池调度  doAddAccept() 方法
+
+        */
+        if (args.acceptPolicy == Args.AcceptPolicy.FAST_ACCEPT || invoker == null) {
+          doAddAccept(targetThread, client);
+        } else {
+          // FAIR_ACCEPT
+          try {
+            invoker.submit(new Runnable() {
+              public void run() {
+                doAddAccept(targetThread, client);
+              }
+            });
+          } catch (RejectedExecutionException rx) {
+            LOGGER.warn("ExecutorService rejected accept registration!", rx);
+            // close immediately
+            client.close();
+          }
+        }
+      }
+    }
+
+    private TNonblockingTransport doAccept() {
+      try {
+        return (TNonblockingTransport) serverTransport.accept();
+      } catch (TTransportException tte) {
+        // something went wrong accepting.
+        LOGGER.warn("Exception trying to accept!", tte);
+        return null;
+      }
+    }
+
+    private void doAddAccept(SelectorThread thread, TNonblockingTransport client) {
+    	/*
+    	SelectorThread 的 addAcceptedConnection() 方法
+
+    	*/
+      if (!thread.addAcceptedConnection(client)) {
+        client.close();
+      }
+    }
+  } // AcceptThread
+
+
+```
+
+
+
+
+
+
+
+
+接着是 SelectorThread类 继承 AbstractSelectThread  是 TThreadedSelectorServer.java 的内部类
+两个方法最重要
+1. 当然是线程运行的run() 方法
+2. addAcceptedConnection() 方法 ；
+
+
+selector 对象在 AbstractSelectThread的全局变量中 ，构造函数初始化
+
+
+run() 方法:
+1.监听select 读写事件的到达
+2.查看阻塞队列 TNonblockingTransport 的到达
+3.处理读写事件(即远程方法调用)
+
+
+
+具体方法解释写在方法代码中...
+
+
+```
+
+/**
+     * Set up the SelectorThread with an bounded queue for incoming accepts.
+     * 
+     * @throws IOException
+     *           if a selector cannot be created
+     */
+    public SelectorThread(int maxPendingAccepts) throws IOException {
+      this(createDefaultAcceptQueue(maxPendingAccepts));
+    }
+
+    /**
+     * Set up the SelectorThread with a specified queue for connections.
+     * 
+     * @param acceptedQueue
+     *          The BlockingQueue implementation for holding incoming accepted
+     *          connections.
+     * @throws IOException
+     *           if a selector cannot be created.
+     */
+    public SelectorThread(BlockingQueue<TNonblockingTransport> acceptedQueue) throws IOException {
+      this.acceptedQueue = acceptedQueue;
+    }
+
+    /**
+     * Hands off an accepted connection to be handled by this thread. This
+     * method will block if the queue for new connections is at capacity.
+     * 
+     * @param accepted
+     *          The connection that has been accepted.
+     * @return true if the connection has been successfully added.
+     */
+    public boolean addAcceptedConnection(TNonblockingTransport accepted) {
+      try {
+      	/*
+
+      	将 accept SelectionKey.OP_ACCEPT 事件，获取的将SocketChannel 封装后的 accepted （TNonblockingTransport）对象传入，
+      	添加到阻塞队列中
+
+      	并执行 selector.wakeup();  唤醒  阻塞的 selector.select(); 
+
+      	*/
+
+        acceptedQueue.put(accepted);
+      } catch (InterruptedException e) {
+        LOGGER.warn("Interrupted while adding accepted connection!", e);
+        return false;
+      }
+
+      /*
+      selector 对象在 AbstractSelectThread的全局变量中 ，构造函数初始化
+
+      */
+      selector.wakeup();
+      return true;
+    }
+
+    /**
+     * The work loop. Handles selecting (read/write IO), dispatching, and
+     * managing the selection preferences of all existing connections.
+     */
+    public void run() {
+      try {
+        while (!stopped_) {
+          select();
+          processAcceptedConnections();
+          processInterestChanges();
+        }
+        for (SelectionKey selectionKey : selector.keys()) {
+          cleanupSelectionKey(selectionKey);
+        }
+      } catch (Throwable t) {
+        LOGGER.error("run() on SelectorThread exiting due to uncaught error", t);
+      } finally {
+        try {
+          selector.close();
+        } catch (IOException e) {
+          LOGGER.error("Got an IOException while closing selector!", e);
+        }
+        // This will wake up the accept thread and the other selector threads
+        TThreadedSelectorServer.this.stop();
+      }
+    }
+
+    /**
+     * Select and process IO events appropriately: If there are existing
+     * connections with data waiting to be read, read it, buffering until a
+     * whole frame has been read. If there are any pending responses, buffer
+     * them until their target client is available, and then send the data.
+     */
+    private void select() {
+      try {
+        // wait for io events.
+        /*
+
+        	该方法会被 addAcceptedConnection() 方法中的 selector.wakeup();  然而还并没有注册任何 selectedKeys 
+        	则select() 方法会返回，并继续阻塞
+        	执行 processAcceptedConnections() 方法
+        */
+        selector.select();
+
+
+        // process the io events we received
+        Iterator<SelectionKey> selectedKeys = selector.selectedKeys().iterator();
+        while (!stopped_ && selectedKeys.hasNext()) {
+          SelectionKey key = selectedKeys.next();
+          selectedKeys.remove();
+
+          // skip if not valid
+          if (!key.isValid()) {
+            cleanupSelectionKey(key);
+            continue;
+          }
+
+          if (key.isReadable()) {
+            // deal with reads
+            /*
+            	AbstractSelectThread 的 handleRead()方法
+
+            */
+            handleRead(key);
+          } else if (key.isWritable()) {
+            // deal with writes
+            /*
+            	AbstractSelectThread 的 handleWrite()方法
+
+            */
+            handleWrite(key);
+          } else {
+            LOGGER.warn("Unexpected state in select! " + key.interestOps());
+          }
+        }
+      } catch (IOException e) {
+        LOGGER.warn("Got an IOException while selecting!", e);
+      }
+    }
+
+    private void processAcceptedConnections() {
+      // Register accepted connections
+      while (!stopped_) {
+      	/*
+      		从阻塞队列中获取 TNonblockingTransport 对象,若存在对象则
+      		执行 registerAccepted() 方法 
+      		给 TNonblockingTransport 对象注册 SelectionKey.OP_READ 事件
+      		触发 run 方法下的select() 方法，就是 selector.selectedKeys() 不会为空，则会进行 handleRead(key); 或者  handleWrite(key); 方法
+      	*/
+        TNonblockingTransport accepted = acceptedQueue.poll();
+        if (accepted == null) {
+          break;
+        }
+        registerAccepted(accepted);
+      }
+    }
+
+    protected FrameBuffer createFrameBuffer(final TNonblockingTransport trans,
+        final SelectionKey selectionKey,
+        final AbstractSelectThread selectThread) {
+        return processorFactory_.isAsyncProcessor() ?
+                  new AsyncFrameBuffer(trans, selectionKey, selectThread) :
+                  new FrameBuffer(trans, selectionKey, selectThread);
+    }
+
+    private void registerAccepted(TNonblockingTransport accepted) {
+      SelectionKey clientKey = null;
+      try {
+
+      	// 给程序注册 read 事件
+        clientKey = accepted.registerSelector(selector, SelectionKey.OP_READ);
+
+
+        /*
+        	创建 FrameBuffer 对象 这个对象也很重要，
+        	用于对流的读写 和 信息的编解码和协议识别，最后的
+        	invoke() 方法 调用的服务 并给channel 的 interestOps 重新注册事件，注册写事件 SelectionKey.OP_WRITE 将请求返回
+        */ 
+        FrameBuffer frameBuffer = createFrameBuffer(accepted, clientKey, SelectorThread.this);
+
+        clientKey.attach(frameBuffer);
+      } catch (IOException e) {
+        LOGGER.warn("Failed to register accepted connection to selector!", e);
+        if (clientKey != null) {
+          cleanupSelectionKey(clientKey);
+        }
+        accepted.close();
+      }
+    }
+  } // SelectorThread
+
+
+
+```
+
+
+AbstractSelectThread类 继承 Thread.java 类
+
+```
+
+/**
+   * An abstract thread that handles selecting on a set of transports and
+   * {@link FrameBuffer FrameBuffers} associated with selected keys
+   * corresponding to requests.
+   */
+  protected abstract class AbstractSelectThread extends Thread {
+    protected final Selector selector;
+
+    // List of FrameBuffers that want to change their selection interests.
+    protected final Set<FrameBuffer> selectInterestChanges = new HashSet<FrameBuffer>();
+
+    public AbstractSelectThread() throws IOException {
+      this.selector = SelectorProvider.provider().openSelector();
+    }
+
+    /**
+     * If the selector is blocked, wake it up.
+     */
+    public void wakeupSelector() {
+      selector.wakeup();
+    }
+
+    /**
+     * Add FrameBuffer to the list of select interest changes and wake up the
+     * selector if it's blocked. When the select() call exits, it'll give the
+     * FrameBuffer a chance to change its interests.
+     */
+    public void requestSelectInterestChange(FrameBuffer frameBuffer) {
+      synchronized (selectInterestChanges) {
+        selectInterestChanges.add(frameBuffer);
+      }
+      // wakeup the selector, if it's currently blocked.
+      selector.wakeup();
+    }
+
+    /**
+     * Check to see if there are any FrameBuffers that have switched their
+     * interest type from read to write or vice versa.
+     */
+    protected void processInterestChanges() {
+      synchronized (selectInterestChanges) {
+        for (FrameBuffer fb : selectInterestChanges) {
+          fb.changeSelectInterests();
+        }
+        selectInterestChanges.clear();
+      }
+    }
+
+    /**
+     * Do the work required to read from a readable client. If the frame is
+     * fully read, then invoke the method call.
+     */
+    protected void handleRead(SelectionKey key) {
+      FrameBuffer buffer = (FrameBuffer) key.attachment();
+      if (!buffer.read()) {
+        cleanupSelectionKey(key);
+        return;
+      }
+
+      // if the buffer's frame read is complete, invoke the method.
+      if (buffer.isFrameFullyRead()) {
+
+      	/*
+      		数据读成功时，调用服务
+      		requestInvoke() 方法在 TThreadedSelectorServer 中实现
+
+
+      	*/
+        if (!requestInvoke(buffer)) {
+          cleanupSelectionKey(key);
+        }
+      }
+    }
+
+    /**
+     * Let a writable client get written, if there's data to be written.
+     */
+    protected void handleWrite(SelectionKey key) {
+      FrameBuffer buffer = (FrameBuffer) key.attachment();
+      if (!buffer.write()) {
+        cleanupSelectionKey(key);
+      }
+    }
+
+    /**
+     * Do connection-close cleanup on a given SelectionKey.
+     */
+    protected void cleanupSelectionKey(SelectionKey key) {
+      // remove the records from the two maps
+      FrameBuffer buffer = (FrameBuffer) key.attachment();
+      if (buffer != null) {
+        // close the buffer
+        buffer.close();
+      }
+      // cancel the selection key
+      key.cancel();
+    }
+  } // SelectThread
+
+
+```
+
+
+
+TThreadedSelectorServer.java 中的 requestInvoke()
+通过invoker 线程池，调用服务
+```
+
+ /**
+   * We override the standard invoke method here to queue the invocation for
+   * invoker service instead of immediately invoking. If there is no thread
+   * pool, handle the invocation inline on this thread
+   */
+  @Override
+  protected boolean requestInvoke(FrameBuffer frameBuffer) {
+  	/*
+  	getRunnable() 方法将 FrameBuffer 对象封装到 实现Runnable 接口的
+  	Invocation.java 类用来调用服务 frameBuffer.invoke() 方法
+  	*/
+    Runnable invocation = getRunnable(frameBuffer);
+    if (invoker != null) {
+      try {
+        invoker.execute(invocation);
+        return true;
+      } catch (RejectedExecutionException rx) {
+        LOGGER.warn("ExecutorService rejected execution!", rx);
+        return false;
+      }
+    } else {
+      // Invoke on the caller's thread
+      invocation.run();
+      return true;
+    }
+  }
+
+```
+
+
+最后整个流程就差不多了
+可以研究 FrameBuffer.java 类中对数据读写，编解码，协议识别，还有方法调用的具体实现

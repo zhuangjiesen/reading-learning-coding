@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<component>
+
+  <fileSets>
+
+    <!-- Copy over binary files -->
+    <fileSet>
+      <directory>src/release</directory>
+      <outputDirectory>/</outputDirectory>
+      <includes>
+        <include>bin/*.jar</include>
+        <include>conf/*.ts</include>
+        <include>conf/*.ks</include>
+        <include>conf/*.cert</include>
+        <include>webapps/*.ico</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+
+    <!-- lets copy the portions of the admin web app we need - as we can't exclude stuff from the WAR -->
+    <fileSet>
+      <directory>../activemq-web-console/src/main/webapp/images</directory>
+      <outputDirectory>/webapps/images</outputDirectory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
+      <directory>../activemq-web-console/src/main/webapp/styles</directory>
+      <outputDirectory>/webapps/styles</outputDirectory>
+      <includes>
+        <include>*</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
+      <directory>../activemq-web-console/src/main/webapp</directory>
+      <outputDirectory>/webapps/admin</outputDirectory>
+      <excludes>
+        <exclude>**/activemq.xml</exclude>
+        <exclude>**/webconsole-embedded.xml</exclude>
+      </excludes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
+      <directory>../activemq-web-console/target/classes</directory>
+      <outputDirectory>/webapps/admin/WEB-INF/classes</outputDirectory>
+      <includes>
+        <include>**/*.class</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+
+    <!-- the web demo -->
+    <fileSet>
+      <directory>../activemq-web-demo/src/main/webapp</directory>
+      <outputDirectory>/webapps-demo/demo</outputDirectory>
+      <excludes>
+        <exclude>**/activemq.xml</exclude>
+        <exclude>**/webconsole-embedded.xml</exclude>
+      </excludes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
+      <directory>../activemq-web-console/src/main/webapp/styles/</directory>
+      <outputDirectory>/webapps-demo/demo/styles/</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
+      <directory>../activemq-web-console/src/main/webapp/images/</directory>
+      <outputDirectory>/webapps-demo/demo/images/</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+    <fileSet>
+      <directory>../activemq-web-console/src/main/webapp/js/</directory>
+      <outputDirectory>/webapps-demo/demo/js/</outputDirectory>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </fileSet>
+  </fileSets>
+
+  <dependencySets>
+
+    <!-- Copy over jar files -->
+    <dependencySet>
+      <outputDirectory>/bin</outputDirectory>
+      <unpack>false</unpack>
+      <outputFileNameMapping>activemq.jar</outputFileNameMapping>
+      <includes>
+        <include>${pom.groupId}:activemq-run</include>
+      </includes>
+      <fileMode>0644</fileMode>
+    </dependencySet>
+
+    <dependencySet>
+      <outputDirectory>/</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <includes>
+        <include>${pom.groupId}:activemq-all</include>
+      </includes>
+      <fileMode>0755</fileMode>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>/lib</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <includes>
+        <include>org.slf4j:slf4j-api</include>
+        <include>org.slf4j:jcl-over-slf4j</include>
+        <include>${pom.groupId}:activemq-client</include>
+        <include>${pom.groupId}:activemq-broker</include>
+        <include>${pom.groupId}:activemq-openwire-legacy</include>
+        <include>${pom.groupId}:activemq-kahadb-store</include>
+        <include>${pom.groupId}:activemq-spring</include>
+        <include>${pom.groupId}:activemq-console</include>
+        <include>${pom.groupId}:activemq-jaas</include>
+        <include>org.apache.activemq.protobuf:activemq-protobuf</include>
+        <include>org.apache.geronimo.specs:geronimo-j2ee-management_1.1_spec</include>
+        <include>org.apache.geronimo.specs:geronimo-jms_1.1_spec</include>
+        <include>org.apache.geronimo.specs:geronimo-jta_1.0.1B_spec</include>
+        <include>${pom.groupId}:activemq-web</include>
+        <include>org.fusesource.hawtbuf:hawtbuf</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>/lib/camel</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <includes>
+        <include>org.apache.camel:camel-core</include>
+        <include>org.apache.camel:camel-spring</include>
+        <include>org.apache.camel:camel-jms</include>
+        <include>org.apache.activemq:activemq-camel</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>/lib/optional</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <includes>
+        <include>${pom.groupId}:activemq-amqp</include>
+        <include>${pom.groupId}:activemq-mqtt</include>
+        <include>${pom.groupId}:activemq-stomp</include>
+        <include>${pom.groupId}:activemq-http</include>
+        <include>${pom.groupId}:activemq-jdbc-store</include>
+        <include>${pom.groupId}:activemq-leveldb-store</include>
+        <include>${pom.groupId}:activemq-log4j-appender</include>
+        <include>${pom.groupId}:activemq-jms-pool</include>
+        <include>${pom.groupId}:activemq-pool</include>
+        <include>${pom.groupId}:activemq-partition</include>
+        <include>${pom.groupId}:activemq-shiro</include>
+        <include>${pom.groupId}:activeio-core</include>
+        <include>commons-beanutils:commons-beanutils</include>
+        <include>commons-collections:commons-collections</include>
+        <include>org.apache.commons:commons-dbcp2</include>
+        <include>org.apache.commons:commons-pool2</include>
+        <include>commons-codec:commons-codec</include>
+        <include>commons-net:commons-net</include>
+        <include>commons-lang:commons-lang</include>
+        <include>org.slf4j:slf4j-log4j12</include>
+        <include>log4j:log4j</include>
+        <include>org.apache.geronimo.specs:geronimo-j2ee-connector_1.5_spec</include>
+        <include>org.apache.httpcomponents:httpclient</include>
+        <include>org.apache.httpcomponents:httpcore</include>
+        <include>org.apache.xbean:xbean-spring</include>
+        <include>org.springframework:spring-aop</include>
+        <include>org.springframework:spring-beans</include>
+        <include>org.springframework:spring-context</include>
+        <include>org.springframework:spring-core</include>
+        <include>org.springframework:spring-expression</include>
+        <include>org.springframework:spring-jms</include>
+        <include>org.springframework:spring-oxm</include>
+        <include>org.springframework:spring-tx</include>
+        <include>com.thoughtworks.xstream:xstream</include>
+        <include>xpp3:xpp3</include>
+        <include>org.codehaus.jettison:jettison</include>
+        <include>org.apache.velocity:velocity</include>
+        <include>org.apache.servicemix.bundles:org.apache.servicemix.bundles.josql</include>
+        <include>org.jasypt:jasypt</include>
+        <include>org.jasypt:jasypt-spring31</include>
+        <include>javax.jmdns:jmdns</include>
+        <include>org.apache.qpid:proton-j</include>
+        <include>${pom.groupId}:activemq-runtime-config</include>
+        <include>org.jvnet.jaxb2_commons:jaxb2-basics-runtime</include>
+
+        <!-- activemq-leveldb-store dependencies -->
+        <include>org.scala-lang:scala-library</include>
+        <include>org.fusesource.hawtbuf:hawtbuf-proto</include>
+        <include>org.fusesource.hawtdispatch:*</include>
+        <include>org.iq80.leveldb:*</include>
+        <include>com.google.guava:guava</include>
+        <include>org.fusesource.leveldbjni:*</include>
+        <include>org.fusesource.hawtjni:hawtjni-runtime</include>
+        <include>org.xerial.snappy:*</include>
+        <include>org.iq80.snappy:*</include>
+        <include>org.linkedin:org.linkedin.zookeeper-impl</include>
+        <include>org.linkedin:org.linkedin.util-core</include>
+        <include>org.apache.zookeeper:zookeeper</include>
+        <include>com.fasterxml.jackson.core:*</include>
+
+        <!-- Apache Shiro dependencies: -->
+        <include>org.apache.shiro:shiro-core</include>
+        <include>org.apache.shiro:shiro-spring</include>
+
+        <!-- insight log -->
+        <include>io.fabric8.insight:insight-log-core</include>
+        <include>io.fabric8.insight:insight-log4j</include>
+
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>/lib/extra</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <useTransitiveFiltering>true</useTransitiveFiltering>
+      <includes>
+        <!-- mqtt -->
+        <include>org.fusesource.mqtt-client:mqtt-client</include>
+
+        <!-- junit integration -->
+        <include>org.apache.activemq.tooling:activemq-junit</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>/lib/web</outputDirectory>
+      <unpack>false</unpack>
+      <scope>runtime</scope>
+      <includes>
+        <include>org.springframework:spring-web</include>
+        <include>org.springframework:spring-webmvc</include>
+        <include>org.eclipse.jetty.aggregate:jetty-all</include>
+        <include>org.apache.tomcat:tomcat-servlet-api</include>
+        <include>org.apache.tomcat:tomcat-websocket-api</include>
+
+        <!-- JSP support -->
+        <!-- Jetty JSP api-->
+        <include>org.eclipse.jetty:apache-jsp</include>
+        <!-- Jetty JSP impl-->
+        <include>org.mortbay.jasper:apache-jsp</include>
+        <!-- jstl and el api -->
+        <include>org.eclipse.jetty:apache-jstl</include>
+        <include>org.apache.taglibs:taglibs-standard-spec</include>
+        <!-- jstl and el impl -->
+        <include>org.mortbay.jasper:apache-el</include>
+        <include>org.apache.taglibs:taglibs-standard-impl</include>
+
+        <include>org.apache.geronimo.specs:geronimo-annotation_1.0_spec</include>
+        <include>org.ow2.asm:asm</include>
+        <include>org.eclipse.jetty.orbit:org.eclipse.jdt.core</include>
+
+        <!-- Atom/RSS support -->
+        <include>rome:rome</include>
+        <include>jdom:jdom</include>
+
+        <!-- REST API -->
+        <include>org.jolokia:jolokia-core</include>
+        <include>com.googlecode.json-simple:json-simple</include>
+      </includes>
+      <fileMode>0644</fileMode>
+      <directoryMode>0755</directoryMode>
+    </dependencySet>
+  </dependencySets>
+</component>
