@@ -1,4 +1,4 @@
-# HashMap.putAll() 的实现源码
+# HashMap.putAll() 的实现源码- 以及map的缩容
 ### 背景
 ```
 写了个netty-websocket框架，用了ConcurrentHashMap 作自定义心跳处理(微信页面上用websocket时，页面关闭不会有close事件)
