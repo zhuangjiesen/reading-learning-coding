@@ -1,7 +1,10 @@
 # Redis主从全量同步的方式(策略)
+[github博客地址](https://github.com/zhuangjiesen/reading-learning-coding/blob/master/redis/Redis主从全量同步的方式(策略).md)
 
 ### redis.conf配置中发现的
-#### 注: 2.8.9 3.2.0 4.0.0 都有的配置
+#### 注: 版本 2.8.9 3.2.0 4.0.0 都有的配置
+### 本来以为就是生成rdb文件，传输给slave，其实不然
+
 ```
 # Replication SYNC strategy: disk or socket.
 #
