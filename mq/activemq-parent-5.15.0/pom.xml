@@ -59,7 +59,7 @@
     <commons-logging-version>1.2</commons-logging-version>
     <commons-pool2-version>2.4.2</commons-pool2-version>
     <commons-primitives-version>1.0</commons-primitives-version>
-    <commons-net-version>3.6</commons-net-version>
+    <commons-net-version>3.9.0</commons-net-version>
     <directory-version>2.0.0-M6</directory-version>
     <ftpserver-version>1.0.6</ftpserver-version>
     <geronimo-version>1.0</geronimo-version>
